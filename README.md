@@ -2,15 +2,17 @@
 
 Cloudflare Workers MCP server for Minecraft modpack development. Generates FTB Quests chapters and tasks, KubeJS scripts (weapons, armor, recipes), validates SNBT/config files, and provides diagnostic checks.
 
-## Deployment
+## Deployment Status
 
-This MCP runs on Cloudflare Workers. After deployment, it is accessible at:
+This project is configured for Cloudflare Workers deployment but is **not yet deployed**. It runs locally via `wrangler dev` for development and testing. To deploy, see [Deploy to Cloudflare](#deploy-to-cloudflare) below.
+
+### Local Development
+
+Run locally to preview and test before deploying:
 
 ```
-https://<your-worker>.<your-subdomain>.workers.dev/mcp
+http://localhost:8788/mcp
 ```
-
-Local development uses `wrangler dev` to preview before deploying.
 
 ## Tools
 
@@ -50,7 +52,7 @@ Local development uses `wrangler dev` to preview before deploying.
 - **SNBT validation** — catches syntax errors before they cause runtime issues in-game
 - **KubeJS diagnostics** — detects deprecated APIs and Rhino engine compatibility problems
 - **Zero network dependency** — all generation is purely algorithmic; no external APIs called
-- **Cloudflare Workers deployment** — runs globally with low latency via the Workers edge network
+- **Cloudflare Workers ready** — designed for edge deployment; no network or external API dependency for generation logic
 
 ## Installation (Local Development)
 
@@ -85,35 +87,29 @@ npm run deploy
 
 ### Configuration for MCP clients
 
-After deployment, add to your MCP client config:
+**Local development** — connect to the local server:
 
 ```json
 {
   "mcpServers": {
     "minecraft-mod": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-stdio"],
-      "env": {
-        "MCP_SERVER_URL": "https://<your-worker>.<your-subdomain>.workers.dev/mcp"
-      }
+      "url": "http://localhost:8788/mcp"
     }
   }
 }
 ```
 
-Or if using an HTTP-based MCP client:
+**Production deployment** — connect to the live endpoint:
 
 ```json
 {
   "mcpServers": {
     "minecraft-mod": {
-      "url": "https://<your-worker>.<your-subdomain>.workers.dev/mcp"
+      "url": "https://minecraft-mcp.3510985146.workers.dev/mcp"
     }
   }
 }
 ```
-
-Replace `<your-worker>` and `<your-subdomain>` with your actual Cloudflare Workers deployment URL.
 
 ## Architecture
 
@@ -137,7 +133,7 @@ minecraft-mcp-server/
 └── wrangler.jsonc         # Cloudflare Workers deployment config
 ```
 
-The MCP server is built on the `@modelcontextprotocol/sdk` v1.x and deployed as a Cloudflare Worker using the `agents` library's `createLegacyMcpHandler`.
+The MCP server is built on the `@modelcontextprotocol/sdk` v1.x and is designed to run as a Cloudflare Worker via the `agents` library's `createLegacyMcpHandler`.
 
 ## Testing
 
@@ -155,10 +151,9 @@ All 49 unit tests run fully offline — no network or Cloudflare account require
 |--------|---------|-------|-------|
 | Local dev (`wrangler dev`) | ✅ | ✅ | ✅ |
 | Unit tests (`vitest`) | ✅ | ✅ | ✅ |
-| Production deployment | ✅ (Cloudflare) | ✅ (Cloudflare) | ✅ (Cloudflare) |
-| MCP client connection | ✅ | ✅ | ✅ |
+| Production deployment | Requires Cloudflare account | Requires Cloudflare account | Requires Cloudflare account |
 
-This MCP runs entirely on Cloudflare Workers infrastructure. The only platform dependency is having a Cloudflare account with Workers enabled. All generation logic is pure JavaScript/TypeScript and fully cross-platform.
+This project is designed to run on Cloudflare Workers. For local development and testing, use `wrangler dev` — no Cloudflare account or internet connection is required. The generation logic is pure TypeScript and fully offline. To deploy to production, you need a Cloudflare account with Workers enabled.
 
 ## License
 
