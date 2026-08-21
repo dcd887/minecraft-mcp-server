@@ -4,7 +4,9 @@ Cloudflare Workers MCP server for Minecraft modpack development. Generates FTB Q
 
 ## Deployment Status
 
-This project is configured for Cloudflare Workers deployment but is **not yet deployed**. It runs locally via `wrangler dev` for development and testing. To deploy, see [Deploy to Cloudflare](#deploy-to-cloudflare) below.
+**Deployed at:** https://minecraft-mcp.mcjj.workers.dev
+
+This project runs as a Cloudflare Worker and is live at the URL above. For local development and testing, see [Local Development](#local-development) below.
 
 ### Local Development
 
@@ -105,7 +107,7 @@ npm run deploy
 {
   "mcpServers": {
     "minecraft-mod": {
-      "url": "https://minecraft-mcp.3510985146.workers.dev/mcp"
+      "url": "https://minecraft-mcp.mcjj.workers.dev/mcp"
     }
   }
 }
