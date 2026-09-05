@@ -10,6 +10,9 @@
     "deploy": "wrangler deploy",
     "test": "vitest run"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
