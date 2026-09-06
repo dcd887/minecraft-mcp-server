@@ -2,6 +2,8 @@
 
 Cloudflare Workers MCP server for Minecraft modpack development. Generates FTB Quests chapters and tasks, KubeJS scripts (weapons, armor, recipes), validates SNBT/config files, and provides diagnostic checks.
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/dcd887-minecraft-mcp-server-uj1ibe?v=2c82cfa789940e16292a7cbc7e0c91fc)](https://m8ven.ai/mcp/dcd887-minecraft-mcp-server-uj1ibe)
+
 ## Deployment Status
 
 **Deployed at:** https://minecraft-mcp.mcjj.workers.dev
