@@ -289,13 +289,13 @@ function buildServer(): McpServer {
   return server;
 }
 
-const server = buildServer();
-const mcpHandler = createLegacyMcpHandler(server, { route: "/mcp" });
-
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
     if (url.pathname === "/mcp") {
+      // 每次请求新建 server：agents 的 legacy handler 不允许复用已连接的 McpServer，
+      // 复用会抛 "Server is already connected to a transport" → tools/list 返回 500。
+      const mcpHandler = createLegacyMcpHandler(buildServer(), { route: "/mcp" });
       return mcpHandler(request, env, ctx);
     }
     return new Response(
