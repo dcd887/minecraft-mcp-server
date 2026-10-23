@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.dcd887/minecraft",
+  "description": "Minecraft 模组开发 MCP：查源码、看类、跑测试、改配置，14 个工具",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/dcd887/minecraft-mod-mcp-server",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://minecraft-mcp.mcjj.workers.dev/mcp"
+    }
+  ]
+}
