@@ -2,7 +2,7 @@
 
 Cloudflare Workers MCP server for Minecraft modpack development. Generates FTB Quests chapters and tasks, KubeJS scripts (weapons, armor, recipes), validates SNBT/config files, and provides diagnostic checks.
 
-[![M8ven Score](https://m8ven.ai/badge/mcp/dcd887-minecraft-mcp-server-uj1ibe?v=2c82cfa789940e16292a7cbc7e0c91fc)](https://m8ven.ai/mcp/dcd887-minecraft-mcp-server-uj1ibe)
+[![M8ven Verified](https://m8ven.ai/badge/mcp/dcd887/minecraft-mcp-server?variant=verified)](https://m8ven.ai/mcp/dcd887/minecraft-mcp-server?s=readme)
 
 ## Deployment Status
 
@@ -162,3 +162,7 @@ This project is designed to run on Cloudflare Workers. For local development and
 ## License
 
 MIT
+
+## Security Notes
+
+`npm audit --omit=dev` reports 0 vulnerabilities. The MCP protocol packages are pinned to patched versions via `overrides` in `package.json` (`@modelcontextprotocol/sdk ^1.32.1`, `@modelcontextprotocol/client ^2.3.1`, `@modelcontextprotocol/server ^2.3.1`), because the `agents` library pins older vulnerable versions and upgrading it to a fixed major release would be a breaking change. All 14 tools declare the four MCP annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`) and a zod `inputSchema`.

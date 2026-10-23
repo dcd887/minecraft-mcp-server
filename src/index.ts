@@ -10,25 +10,21 @@
  */
 import { createLegacyMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import type { Env } from "./types";
 
 import { questToolSchemas, handleGenerateQuestChapter, handleGenerateQuestTask, handleGenerateHexId } from "./tools/quest";
 import { kubejsToolSchemas, handleGenerateWeapon, handleGenerateArmorSet, handleGenerateShapedRecipe, handleGenerateShapelessRecipe, handleGenerateSmelting, handleGenerateRemoveRecipe } from "./tools/kubejs";
 import { validateToolSchemas, handleValidateSnbt, handleCheckKubeJS, handleGenerateTexturePath, handleGenerateChapterGroup, handleGenerateQuestData } from "./tools/validate";
 
-// 所有工具均为纯代码生成/验证，不写入文件系统、不访问网络
-const READONLY_ANNOTATIONS = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  openWorldHint: false,
-} as const;
-
-// 确定性工具：相同输入永远产生相同输出
-const IDEMPOTENT_ANNOTATIONS = { ...READONLY_ANNOTATIONS, idempotentHint: true } as const;
-
-// 非确定性工具：包含随机ID生成，相同输入可能产生不同输出
-const NON_IDEMPOTENT_ANNOTATIONS = { ...READONLY_ANNOTATIONS, idempotentHint: false } as const;
+/*
+ * 工具注解说明：下方每个工具都显式内联声明四个布尔 hint（不共享常量、不省略任何一项），
+ * 取值与 handler 实际行为一致：
+ * - 全部 14 个工具都是纯代码生成/验证，不写文件系统、不访问网络，对调用方环境零副作用
+ *   （MCP 语义：不修改环境即为只读）→ 只读 hint 全部 true，破坏性 hint 全部 false
+ * - generate_hex_id / generate_quest_chapter / generate_quest_task 内嵌随机十六进制 ID，
+ *   相同输入会产生不同输出 → 幂等 hint 为 false；其余 11 个工具输出完全由输入决定 → true
+ * - 全部工具只做本地字符串/模板运算，不访问任何外部实体 → 开放世界 hint 全部 false
+ */
 
 function buildServer(): McpServer {
   const server = new McpServer({
@@ -40,51 +36,86 @@ function buildServer(): McpServer {
   // 1. FTB Quests 任务书工具
   // =========================================
 
-  server.tool(
+  server.registerTool(
     "generate_quest_chapter",
-    "生成一个完整的 FTB Quests 章节文件（SNBT 格式），包含多个任务、依赖关系和奖励",
-    questToolSchemas.generate_quest_chapter.params.shape,
-    NON_IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成一个完整的 FTB Quests 章节文件（SNBT 格式），包含多个任务、依赖关系和奖励",
+      inputSchema: questToolSchemas.generate_quest_chapter.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: JSON.stringify(handleGenerateQuestChapter(params), null, 2) }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_quest_task",
-    "生成单个 FTB Quests 任务定义，支持 item/kill/advancement/checklist 四种类型",
-    questToolSchemas.generate_quest_task.params.shape,
-    NON_IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成单个 FTB Quests 任务定义，支持 item/kill/advancement/checklist 四种类型",
+      inputSchema: questToolSchemas.generate_quest_task.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: JSON.stringify(handleGenerateQuestTask(params), null, 2) }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_hex_id",
-    "生成一个 16 位随机十六进制 ID（用于 FTB Quests 章节/任务 ID）",
-    {},
-    NON_IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成一个 16 位随机十六进制 ID（用于 FTB Quests 章节/任务 ID）",
+      inputSchema: questToolSchemas.generate_hex_id.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
     async () => ({
       content: [{ type: "text", text: JSON.stringify(handleGenerateHexId()) }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_chapter_group_snbt",
-    "生成 chapter_groups.snbt 配置文件，用于定义任务书的分组（主线/支线）",
-    validateToolSchemas.generate_chapter_group_snbt.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 chapter_groups.snbt 配置文件，用于定义任务书的分组（主线/支线）",
+      inputSchema: validateToolSchemas.generate_chapter_group_snbt.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateChapterGroup(params).content }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_quest_data_snbt",
-    "生成 data.snbt 任务书主配置文件，包含标题、图标、进度模式等设置",
-    validateToolSchemas.generate_quest_data_snbt.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 data.snbt 任务书主配置文件，包含标题、图标、进度模式等设置",
+      inputSchema: validateToolSchemas.generate_quest_data_snbt.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateQuestData(params).content }],
     })
@@ -94,21 +125,35 @@ function buildServer(): McpServer {
   // 2. KubeJS 物品/武器/盔甲生成
   // =========================================
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_weapon",
-    "生成 KubeJS 职业武器注册代码，包含攻击力、速度、耐久和技能描述",
-    kubejsToolSchemas.generate_kubejs_weapon.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 职业武器注册代码，包含攻击力、速度、耐久和技能描述",
+      inputSchema: kubejsToolSchemas.generate_kubejs_weapon.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateWeapon(params).code }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_armor_set",
-    "生成 KubeJS 职业盔甲套装注册代码（含 tier 定义），包含头盔、胸甲、护腿、靴子四件套",
-    kubejsToolSchemas.generate_kubejs_armor_set.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 职业盔甲套装注册代码（含 tier 定义），包含头盔、胸甲、护腿、靴子四件套",
+      inputSchema: kubejsToolSchemas.generate_kubejs_armor_set.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateArmorSet(params).code }],
     })
@@ -118,41 +163,69 @@ function buildServer(): McpServer {
   // 3. KubeJS 配方生成
   // =========================================
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_shaped_recipe",
-    "生成 KubeJS 有序合成配方代码，需要指定 3x3 合成模式和材料映射",
-    kubejsToolSchemas.generate_kubejs_shaped_recipe.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 有序合成配方代码，需要指定 3x3 合成模式和材料映射",
+      inputSchema: kubejsToolSchemas.generate_kubejs_shaped_recipe.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateShapedRecipe(params).code }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_shapeless_recipe",
-    "生成 KubeJS 无序合成配方代码，只需指定材料和产物",
-    kubejsToolSchemas.generate_kubejs_shapeless_recipe.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 无序合成配方代码，只需指定材料和产物",
+      inputSchema: kubejsToolSchemas.generate_kubejs_shapeless_recipe.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateShapelessRecipe(params).code }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_smelting",
-    "生成 KubeJS 熔炉/高炉/烟熏炉配方代码",
-    kubejsToolSchemas.generate_kubejs_smelting.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 熔炉/高炉/烟熏炉配方代码",
+      inputSchema: kubejsToolSchemas.generate_kubejs_smelting.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateSmelting(params).code }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_kubejs_remove_recipe",
-    "生成 KubeJS 移除配方代码，用于覆盖或禁用原版/模组的配方",
-    kubejsToolSchemas.generate_kubejs_remove_recipe.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 移除配方代码，用于覆盖或禁用原版/模组的配方",
+      inputSchema: kubejsToolSchemas.generate_kubejs_remove_recipe.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: handleGenerateRemoveRecipe(params).code }],
     })
@@ -162,31 +235,52 @@ function buildServer(): McpServer {
   // 4. 验证 & 诊断工具
   // =========================================
 
-  server.tool(
+  server.registerTool(
     "validate_snbt",
-    "验证 SNBT 文件语法是否正确（检查常见错误如花括号不匹配、Count 格式问题等）",
-    validateToolSchemas.validate_snbt.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "验证 SNBT 文件语法是否正确（检查常见错误如花括号不匹配、Count 格式问题等）",
+      inputSchema: validateToolSchemas.validate_snbt.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: JSON.stringify(handleValidateSnbt(params), null, 2) }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "check_kubejs_errors",
-    "检查 KubeJS 脚本中的常见错误（废弃 API、Rhino 引擎兼容性问题等）",
-    validateToolSchemas.check_kubejs_common_errors.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "检查 KubeJS 脚本中的常见错误（废弃 API、Rhino 引擎兼容性问题等）",
+      inputSchema: validateToolSchemas.check_kubejs_common_errors.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: JSON.stringify(handleCheckKubeJS(params), null, 2) }],
     })
   );
 
-  server.tool(
+  server.registerTool(
     "generate_item_texture_path",
-    "生成 KubeJS 物品/盔甲纹理路径指南，帮助正确放置纹理文件",
-    validateToolSchemas.generate_item_texture_path.params.shape,
-    IDEMPOTENT_ANNOTATIONS,
+    {
+      description: "生成 KubeJS 物品/盔甲纹理路径指南，帮助正确放置纹理文件",
+      inputSchema: validateToolSchemas.generate_item_texture_path.params.shape,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
     async (params) => ({
       content: [{ type: "text", text: JSON.stringify(handleGenerateTexturePath(params), null, 2) }],
     })
